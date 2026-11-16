@@ -1,0 +1,255 @@
+"""Insert a one-paragraph problem gist after each problem's title/link line.
+
+Run from the repo root: python3 tools/add_gists.py
+Idempotent: problems that already have a "> **Problem:**" line are skipped.
+"""
+import pathlib
+import re
+
+G = {
+# ---------- binary search ----------
+"Ceil The Floor": "Given a sorted array `a` and an integer `x`, return the floor (largest element ≤ x) and the ceil (smallest element ≥ x). Use -1 when one doesn't exist.",
+"Find First and Last Position of Element in Sorted Array": "Given a non-decreasing array `nums` and a `target`, return the first and last index of `target`, or `[-1, -1]` if it's absent. Must run in O(log n).",
+"Search in Rotated Sorted Array": "A sorted array of distinct integers was rotated at an unknown pivot. Return the index of `target`, or -1 if it's not there, in O(log n).",
+"Search in Rotated Sorted Array II": "Same as Search in Rotated Sorted Array, but the array may contain duplicates. Return `true` if `target` is present.",
+"Find Minimum in Rotated Sorted Array": "Given a rotated sorted array of unique elements, return its minimum element in O(log n).",
+"Find Minimum in Rotated Sorted Array II": "Given a rotated sorted array that may contain duplicates, return its minimum element.",
+"Find Kth Rotation": "Given a sorted array of distinct elements that was right-rotated `k` times, find `k`. That is the index of the minimum element.",
+"Single Element in a Sorted Array": "In a sorted array every element appears exactly twice except one, which appears once. Find it in O(log n) time and O(1) space.",
+"Find Peak Element": "A peak is an element strictly greater than its neighbours, with `nums[-1] = nums[n] = -∞`. Return the index of any peak in O(log n). Adjacent elements are never equal.",
+"Sqrt(x)": "Given a non-negative integer `x`, return its square root rounded down, without using a built-in power or sqrt function.",
+"Find Nth Root Of M": "Given `n` and `m`, return the integer `x` such that `x^n = m`, or -1 if no such integer exists.",
+"Koko Eating Bananas": "Koko has `piles` of bananas and `h` hours. Each hour she picks one pile and eats up to `k` bananas from it. Return the minimum integer speed `k` that lets her finish all piles within `h` hours.",
+"Minimum Number of Days to Make m Bouquets": "`bloomDay[i]` is the day flower `i` blooms. A bouquet needs `k` adjacent bloomed flowers. Return the minimum number of days needed to make `m` bouquets, or -1 if it's impossible.",
+"Find the Smallest Divisor Given a Threshold": "Choose a positive divisor, divide every element by it (rounding up), and sum the results. Return the smallest divisor whose sum is ≤ `threshold`.",
+"Capacity To Ship Packages Within D Days": "Packages must ship in the given order, one day's load at a time, and a day's load can't exceed the ship's capacity. Return the least capacity that ships everything within `days` days.",
+"Kth Missing Positive Number": "Given a strictly increasing array of positive integers `arr` and an integer `k`, return the `k`-th positive integer missing from `arr`.",
+"Aggressive Cows": "Given stall positions and `k` cows, place the cows in stalls so that the minimum distance between any two cows is as large as possible. Return that distance.",
+"Allocate Books": "Given `n` books with page counts and `m` students, give each student a contiguous block of books (at least one each). Minimise the maximum pages any student gets. Return -1 if `m > n`.",
+"Painter's Partition Problem": "Given board lengths and `k` painters, each painter paints a contiguous run of boards at one unit per unit time. Return the minimum time to paint all boards.",
+"Split Array Largest Sum": "Split `nums` into `k` non-empty contiguous subarrays so the largest subarray sum is minimised. Return that minimised largest sum.",
+"Minimize Max Distance to Gas Station": "Given sorted gas station positions, add `k` new stations anywhere (not necessarily at integer positions). Minimise the maximum distance between adjacent stations and return it.",
+"Median of Two Sorted Arrays": "Given two sorted arrays of sizes `m` and `n`, return the median of the combined array in O(log(m+n)).",
+"K-th Element of Two Sorted Arrays": "Given two sorted arrays, return the `k`-th smallest element of their union.",
+"Row with Maximum 1's": "Given a binary matrix whose rows are sorted, return the index of the row with the most 1s (the lowest index on ties), or -1 if there are no 1s.",
+"Search a 2D Matrix": "Every row of the matrix is sorted, and each row's first element is greater than the previous row's last. Return whether `target` is in the matrix, in O(log(m·n)).",
+"Search a 2D Matrix II": "Each row is sorted left to right and each column top to bottom. Return whether `target` is in the matrix.",
+"Find a Peak Element II": "In a matrix where no two adjacent cells are equal, find any cell strictly greater than its four neighbours (the border counts as -1). Return `[row, col]` in O(m log n) or O(n log m).",
+"Median in a row-wise sorted Matrix": "Given an `n × m` matrix (odd number of cells) whose rows are sorted, return the median of all its elements.",
+"Maximum Candies Allocated to K Children": "Piles of candies can be split into smaller piles but never merged. Give `k` children one pile each, all the same size. Return the largest size possible (0 if none).",
+# ---------- bits ----------
+"Minimum Bit Flips to Convert Number": "Return the minimum number of bit flips needed to turn `start` into `goal`.",
+"Subsets": "Given an array of unique integers, return all possible subsets (the power set), with no duplicate subsets.",
+"Single Number": "Every element appears twice except one. Find that single element in O(n) time and O(1) extra space.",
+"Single Number II": "Every element appears three times except one, which appears once. Find it in O(n) time and O(1) extra space.",
+"Single Number III": "Exactly two elements appear once and all others appear twice. Return the two single elements in O(n) time and O(1) extra space.",
+"XOR Queries of a Subarray": "For each query `[l, r]`, return `arr[l] XOR arr[l+1] XOR … XOR arr[r]`.",
+"Divide Two Integers": "Divide `dividend` by `divisor` without using multiplication, division or mod, truncating toward zero. Clamp the result to the 32-bit signed range.",
+# ---------- contests ----------
+"Maximize the Total Height of Unique Towers (LC Biweekly 140)": "Assign each tower a positive height no greater than its `maximumHeight[i]`, with all heights distinct. Return the maximum total height, or -1 if that's impossible.",
+"Sherlock and Cost (Mock Test 1)": "Given `B`, build `A` with `1 ≤ A[i] ≤ B[i]` that maximises the sum of `|A[i] - A[i-1]|`. Return that maximum.",
+"Roads and Libraries (Mock Test 1)": "Given cities, buildable roads, the cost of a library and the cost of a road, return the minimum cost so that every city can reach a library.",
+# ---------- daily ----------
+"Different Ways to Add Parentheses": "Given an expression of numbers and `+ - *`, return the results of every possible way to group it with parentheses.",
+"Extra Characters in a String": "Break `s` into non-overlapping substrings that are words in `dictionary`. Characters not covered by any word are extra. Return the minimum number of extra characters.",
+"Find the Length of the Longest Common Prefix": "Given two arrays of positive integers, return the length of the longest common digit-prefix between any `x` from `arr1` and any `y` from `arr2`.",
+"Sum of Prefix Scores of Strings": "The score of a string is the number of words that have it as a prefix. For each word, return the sum of the scores of all its non-empty prefixes.",
+"My Calendar II": "Implement a calendar where `book(start, end)` succeeds unless it would cause a triple booking (three events overlapping at once).",
+"My Calendar I": "Implement a calendar where `book(start, end)` succeeds only if the half-open interval doesn't overlap any existing booking.",
+"Make Sum Divisible by P": "Remove the smallest (possibly empty) subarray so the remaining sum is divisible by `p`. Return its length, or -1. Removing the whole array isn't allowed.",
+"Divide Players Into Teams of Equal Skill": "Split players (even count) into teams of two with equal total skill. Return the sum of each team's skill product, or -1 if that's impossible.",
+"Permutation in String": "Return `true` if `s2` contains a permutation of `s1` as a substring.",
+"Sentence Similarity III": "Two sentences are similar if you can insert one (possibly empty) sentence into one of them to get the other. Return whether they are similar.",
+"Lexicographical Numbers": "Return the numbers `1..n` in lexicographical order, in O(n) time and O(1) extra space.",
+"Maximum Width Ramp": "A ramp is a pair `i < j` with `nums[i] ≤ nums[j]`, and its width is `j - i`. Return the maximum ramp width (0 if there's none).",
+"The Number of the Smallest Unoccupied Chair": "Friends arrive and leave at distinct times, and each takes the lowest-numbered free chair on arrival. Return the chair `targetFriend` sits on.",
+"Divide Intervals Into Minimum Number of Groups": "Split the inclusive intervals into groups so that no two intervals in a group intersect. Return the minimum number of groups.",
+"Smallest Range Covering Elements from K Lists": "Given `k` sorted lists, find the smallest range `[a, b]` that contains at least one number from each list.",
+"Longest Happy String": "Build the longest string using at most `a` 'a's, `b` 'b's and `c` 'c's, with no three identical letters in a row.",
+"Maximum Swap": "Swap two digits at most once to get the largest possible number. Return it.",
+"Count Number of Maximum Bitwise-OR Subsets": "Find the maximum possible bitwise OR of a subset, and return the number of non-empty subsets that reach it.",
+"Parsing a Boolean Expression": "Evaluate an expression made of `t`, `f`, `!(…)`, `&(…, …)` and `|(…, …)`.",
+"Remove Sub-Folders from the Filesystem": "Given a list of folder paths, remove every folder that is a sub-folder of another one, and return the rest.",
+"Find if Array Can Be Sorted": "You may swap adjacent elements that have the same number of set bits. Return whether the array can be sorted.",
+"Rotate String": "Return `true` if `s` can become `goal` after some number of left rotations (shifts).",
+"Best Sightseeing Pair": "The score of a pair `i < j` is `values[i] + values[j] + i - j`. Return the maximum score.",
+# ---------- dp ----------
+"Maximum Number of Moves in a Grid": "Start in any cell of the first column. Move to the up-right, right or down-right cell, but only to a strictly larger value. Return the maximum number of moves.",
+"Minimum Number of Removals to Make Mountain Array": "Return the minimum number of elements to remove so the array becomes a mountain: strictly increasing, then strictly decreasing, with each side non-empty.",
+"Minimum Total Distance Traveled": "Robots and factories sit on a line, and factory `j` can repair at most `limit_j` robots. Return the minimum total distance the robots travel to get repaired.",
+"House Robber": "You can't rob two adjacent houses. Return the maximum money you can rob.",
+"House Robber II": "Same as House Robber, but the houses form a circle, so the first and last are adjacent.",
+"Ninja's Training": "Each day the ninja picks one of three activities, each with given points, but can't repeat the previous day's activity. Return the maximum total points.",
+"Unique Paths": "A robot at the top-left of an `m × n` grid moves only right or down. Count the paths to the bottom-right.",
+"Triangle": "Return the minimum path sum from the top of the triangle to the bottom. From index `i` you move to `i` or `i+1` in the next row.",
+"Minimum Falling Path Sum": "Return the minimum sum of a falling path through an `n × n` matrix. Each step goes down to the same column or a diagonal neighbour.",
+"Cherry Pickup II": "Two robots start in the top-left and top-right corners and move down one row at a time (down-left, down or down-right). Return the maximum cherries collected. A cell shared by both counts once.",
+"Target Sum": "Put `+` or `-` before each number. Count the expressions that evaluate to `target`.",
+"Subset Sum Equal To K": "Return whether some subset of the array sums to `k`.",
+"Partition Equal Subset Sum": "Return whether the array can be split into two subsets with equal sums.",
+"Array Partition with Minimum Difference": "Split the array into two subsets so the absolute difference of their sums is minimised. Return that difference.",
+"Coin Change II": "Given coin denominations (unlimited supply), return the number of combinations that make up `amount`.",
+"Maximum Product Subarray": "Return the largest product of any contiguous subarray.",
+"Unbounded Knapsack": "Each item has a weight and a value and can be taken any number of times. Return the maximum value within capacity `W`.",
+"Minimum Cost For Tickets": "1-day, 7-day and 30-day passes have given costs. Return the minimum cost to travel on every listed day.",
+"Rod Cutting Problem": "Given the price of each piece length, cut a rod of length `n` to maximise the total price.",
+"Longest Common Subsequence": "Return the length of the longest common subsequence of two strings.",
+"Longest Common Substring": "Return the length of the longest common contiguous substring of two strings.",
+"Longest Palindromic Subsequence": "Return the length of the longest subsequence of `s` that is a palindrome.",
+"Shortest Common Supersequence": "Return the shortest string that has both `str1` and `str2` as subsequences.",
+"Distinct Subsequences": "Count the distinct subsequences of `s` that equal `t`.",
+"Painting the Walls": "A paid painter paints wall `i` for `cost[i]` in `time[i]` units. A free painter paints any wall in 1 unit, but only while the paid painter is busy. Return the minimum cost to paint all walls.",
+"Edit Distance": "Return the minimum number of insert, delete and replace operations to turn `word1` into `word2`.",
+"Wildcard Matching": "Implement wildcard matching over the whole string, where `?` matches one character and `*` matches any sequence (including empty).",
+"Best Time to Buy and Sell Stock II": "You may hold at most one share at a time but can trade as often as you like. Return the maximum profit.",
+"Best Time to Buy and Sell Stock III": "You may complete at most two transactions (no overlapping holdings). Return the maximum profit.",
+"Longest Increasing Subsequence": "Return the length of the longest strictly increasing subsequence.",
+"Largest Divisible Subset": "Return the largest subset in which every pair satisfies `a % b == 0` or `b % a == 0`.",
+"Longest String Chain": "Word A is a predecessor of B if inserting exactly one letter into A gives B. Return the length of the longest word chain.",
+"Longest Bitonic Subsequence": "Return the length of the longest subsequence that strictly increases and then strictly decreases.",
+"Number of Longest Increasing Subsequence": "Return how many longest strictly increasing subsequences there are.",
+"Matrix Chain Multiplication": "Given matrix dimensions `arr`, return the minimum number of scalar multiplications needed to multiply the whole chain.",
+"Minimum Cost to Cut a Stick": "Cutting a stick costs its current length. Given the cut positions, choose the order of cuts that minimises the total cost.",
+"Burst Balloons": "Bursting balloon `i` earns `nums[left] * nums[i] * nums[right]` from its current neighbours. Return the maximum coins from bursting them all.",
+"Boolean Evaluation": "Given an expression of `T`, `F` and the operators `&`, `|`, `^`, count the ways to parenthesise it so it evaluates to true (mod 1e9+7).",
+"Palindrome Partitioning II": "Return the minimum number of cuts needed to split `s` into palindromic substrings.",
+"Partition Array for Maximum Sum": "Split the array into contiguous parts of length at most `k`, and replace every element in a part with that part's maximum. Return the largest possible sum.",
+"Maximal Rectangle": "In a binary matrix, return the area of the largest rectangle containing only 1s.",
+"Count Square Submatrices with All Ones": "Count the square submatrices that contain only 1s.",
+"Count Submatrices With All Ones": "Count all rectangular submatrices that contain only 1s.",
+"Two Best Non-Overlapping Events": "Each event has a start, an end and a value. Choose at most two non-overlapping events to maximise the total value.",
+# ---------- graphs ----------
+"Clone Graph": "Return a deep copy of a connected undirected graph, given a reference to one node.",
+"Flood Fill": "Starting from `(sr, sc)`, recolour every 4-directionally connected pixel of the same original colour with `color`.",
+"DFS of Graph": "Return the depth-first traversal of a graph, starting from vertex 0 and visiting neighbours in adjacency-list order.",
+"Word Ladder": "Change one letter at a time, with every intermediate word in `wordList`. Return the number of words in the shortest sequence from `beginWord` to `endWord` (0 if impossible).",
+"Word Ladder II": "Same as Word Ladder, but return every shortest transformation sequence.",
+"Detect Cycle in an Undirected Graph": "Return whether an undirected graph contains a cycle.",
+"Rotting Oranges": "Each minute, rotten oranges rot their 4-directional fresh neighbours. Return the minutes until no fresh orange remains, or -1 if some never rot.",
+"01 Matrix": "For each cell of a binary matrix, return its distance to the nearest 0.",
+"Network Delay Time": "A signal is sent from node `k` along weighted directed edges. Return the time for all nodes to receive it, or -1 if some can't.",
+"Path With Minimum Effort": "A path's effort is its largest absolute height difference between consecutive cells. Return the minimum effort to go from the top-left to the bottom-right.",
+"Number of Ways to Arrive at Destination": "In a weighted undirected graph, count the shortest-time paths from node 0 to node `n-1` (mod 1e9+7).",
+"Shortest Path in Binary Matrix": "Return the length of the shortest 8-directional clear path (all 0s) from the top-left to the bottom-right, or -1 if there's none.",
+"Number of Operations to Make Network Connected": "You can move any cable to connect two computers. Return the minimum number of moves to connect the whole network, or -1 if there aren't enough cables.",
+"Making a Large Island": "Change at most one 0 to 1, then return the size of the largest island.",
+"Accounts Merge": "Merge accounts that share any email, and return each person's sorted emails.",
+"Shortest Bridge": "A grid contains exactly two islands. Return the minimum number of 0s to flip to connect them.",
+"Find Eventual Safe States": "A node is safe if every path from it ends at a terminal node. Return all safe nodes, sorted.",
+"Alien Dictionary": "Given words sorted in an alien language, derive an order of its characters (empty if invalid).",
+"Evaluate Division": "Given equations `a / b = k`, answer queries `x / y`, returning -1 when a query can't be determined.",
+"Critical Connections in a Network": "Return every bridge: an edge whose removal disconnects some servers.",
+"Longest Increasing Path in a Matrix": "Return the length of the longest strictly increasing path through 4-directional moves.",
+"Reconstruct Itinerary": "Using every flight ticket exactly once and starting from \"JFK\", return the lexicographically smallest itinerary.",
+"Redundant Connection II": "A rooted tree had one extra directed edge added. Return the edge to remove so it's a rooted tree again (the last such edge in the input).",
+"Satisfiability of Equality Equations": "Given equations like `a==b` and `a!=b`, return whether variables can be assigned values that satisfy them all.",
+"Lexicographically Smallest Equivalent String": "`s1[i]` and `s2[i]` are equivalent characters (equivalence is transitive). Return the lexicographically smallest equivalent form of `baseStr`.",
+"Similar String Groups": "Two anagram strings are similar if they're equal or one swap apart. Count the groups formed by connected similarity.",
+"Nearest Exit from Entrance in Maze": "Return the fewest steps from `entrance` to the nearest exit (an empty border cell other than the entrance), or -1 if there's none.",
+"Shortest Path to Get All Keys": "In a grid with walls, keys (`a–f`) and locks (`A–F`), return the fewest moves to collect every key, or -1 if that's impossible.",
+"Number of Enclaves": "Count the land cells from which you can't walk off the grid's boundary.",
+"Number of Closed Islands": "Count the islands of 0s that are completely surrounded by 1s, so they don't touch the border.",
+"Pacific Atlantic Water Flow": "Water flows to neighbours of equal or lower height. Return the cells from which water can reach both the Pacific (top/left) and the Atlantic (bottom/right).",
+"Bus Routes": "`routes[i]` is a bus loop. Return the fewest buses to take from `source` to `target`, or -1 if it can't be done.",
+"Maximum Candies You Can Get from Boxes": "Boxes can be open or locked and contain candies, keys and other boxes. Starting from the initial boxes, return the maximum candies you can collect.",
+"Minimum Cost to Make at Least One Valid Path in a Grid": "Each cell has an arrow pointing to a neighbour, and changing one costs 1. Return the minimum cost to make a path from the top-left to the bottom-right.",
+"Trapping Rain Water II": "Given a 2D height map, return how much water it can trap.",
+"Maximal Network Rank": "The network rank of a pair of cities is the number of roads touching either one, with a shared road counted once. Return the maximum rank over all pairs.",
+"Snakes and Ladders": "On a boustrophedon-numbered board, each move rolls 1–6 and follows any snake or ladder. Return the fewest moves to reach square `n²`, or -1 if impossible.",
+"Maximum Employees to Be Invited to a Meeting": "Each employee will attend only if they can sit next to their favourite person at a round table. Return the maximum number who can be invited.",
+"Shortest Cycle in a Graph": "Return the length of the shortest cycle in an undirected graph, or -1 if there's no cycle.",
+"Course Schedule IV": "Given prerequisite pairs, answer whether course `u` is a (direct or indirect) prerequisite of course `v` for each query.",
+"Find the City With the Smallest Number of Neighbors at a Threshold Distance": "Return the city that can reach the fewest other cities within `distanceThreshold`. On ties, return the city with the largest number.",
+"Divide Nodes Into the Maximum Number of Groups": "Assign nodes to numbered groups so that every edge connects groups whose numbers differ by exactly 1. Return the maximum number of groups, or -1 if impossible.",
+"Count the Number of Complete Components": "Count the connected components in which every pair of vertices is joined by an edge.",
+"Find Minimum Diameter After Merging Two Trees": "Connect one node from each of two trees with an edge. Return the minimum possible diameter of the resulting tree.",
+# ---------- greedy ----------
+"Best Time to Buy and Sell Stock": "Buy on one day and sell on a later day. Return the maximum profit (0 if no profit is possible).",
+"Meeting Rooms II": "Given meeting time intervals, return the minimum number of conference rooms needed.",
+"Jump Game": "Each element is your maximum jump length from that position. Return whether you can reach the last index.",
+"Jump Game II": "Each element is your maximum jump length from that position. Return the minimum number of jumps to reach the last index.",
+# ---------- grind 75 ----------
+"Evaluate Reverse Polish Notation": "Evaluate an arithmetic expression in Reverse Polish Notation using `+ - * /`. Division truncates toward zero.",
+# ---------- rippling ----------
+"Optimal Account Balancing": "Given transactions `[from, to, amount]`, return the minimum number of transactions needed to settle all debts.",
+"rippling.md:Jump Game": "Each element is the maximum jump length from that index. Return the minimum number of jumps to reach the last index, or -1 if it can't be reached.",
+"Ways To Make Coin Change": "Given denominations (unlimited supply) and a `value`, count the ways to make that value.",
+# ---------- sliding window ----------
+"Maximum Sum of Distinct Subarrays With Length K": "Return the maximum sum of any length-`k` subarray whose elements are all distinct (0 if there's none).",
+"Maximum Points You Can Obtain from Cards": "Take exactly `k` cards, each from the start or the end of the row. Return the maximum total points.",
+"Longest Substring Without Repeating Characters": "Return the length of the longest substring with no repeating characters.",
+"Max Consecutive Ones III": "Return the longest run of consecutive 1s in a binary array if you may flip at most `k` 0s.",
+"Fruit Into Baskets": "You have two baskets, each holding a single fruit type. Return the longest contiguous run of trees whose fruit fits in them, i.e. the longest subarray with at most 2 distinct values.",
+"Longest Sub-string with at most K Distinct Characters": "Return the length of the longest substring with at most `k` distinct characters.",
+"Number of Substrings Containing All Three Characters": "Given a string of `a`, `b` and `c`, count the substrings that contain all three at least once.",
+"Longest Repeating Character Replacement": "You may replace at most `k` characters. Return the length of the longest substring that can be made of one repeated letter.",
+"Binary Subarrays With Sum": "Count the non-empty subarrays of a binary array whose sum is `goal`.",
+"Count Number of Nice Subarrays": "Count the subarrays that contain exactly `k` odd numbers.",
+"Subarrays with K Different Integers": "Count the subarrays with exactly `k` distinct integers.",
+"Minimum Window Substring": "Return the smallest substring of `s` that contains every character of `t`, duplicates included (\"\" if there's none).",
+"Maximum Beauty of an Array After Applying Operation": "You may change each element once to any value in `[nums[i]-k, nums[i]+k]`. Return the longest subsequence of equal elements you can get.",
+"Adding Spaces to a String": "Insert a space before each index listed in `spaces`, and return the new string.",
+"Make String a Subsequence Using Cyclic Increments": "Pick any set of indices in `str1` and increment each of those characters cyclically (z→a) at most once. Return whether `str2` can become a subsequence of `str1`.",
+"Move Pieces to Obtain a String": "`L` pieces can only move left and `R` pieces only right, each into blank `_` cells. Return whether `start` can become `target`.",
+"Find Longest Special Substring That Occurs Thrice I": "A special string is made of a single repeated character. Return the length of the longest special substring that occurs at least three times, or -1.",
+# ---------- stacks ----------
+"Valid Parentheses": "Return whether a string of `()[]{}` is properly opened and closed in the right order.",
+"Next Greater Element I": "`nums1` is a subset of `nums2`. For each element of `nums1`, return the first greater element to its right in `nums2`, or -1.",
+"Next Greater Element II": "In a circular array, return the next greater element for every element, or -1.",
+"Trapping Rain Water": "Given bar heights of width 1, return how much rain water they trap.",
+"Sum of Subarray Minimums": "Return the sum of `min(subarray)` over all contiguous subarrays (mod 1e9+7).",
+"Sum of Subarray Ranges": "Return the sum of `max - min` over all subarrays.",
+"Asteroid Collision": "Asteroids move right (positive) or left (negative). When two meet, the smaller explodes, and both explode if equal. Return the state after all collisions.",
+"Largest Rectangle in Histogram": "Return the area of the largest rectangle in a histogram of bar heights with width 1.",
+"Remove K Digits": "Remove `k` digits from the number string `num` to make the smallest possible number.",
+"Online Stock Span": "For each new price, return its span: the number of consecutive days, ending today, with price ≤ today's price.",
+"Sliding Window Maximum": "Return the maximum of every window of size `k` as it slides across the array.",
+"Find the celebrity": "In an `n × n` matrix, `mat[i][j] = 1` means `i` knows `j`. A celebrity is known by everyone and knows no one. Return the celebrity's index, or -1.",
+"Number of Visible People in a Queue": "Person `i` can see person `j > i` if everyone between them is shorter than both. Return how many people each person can see to their right.",
+"LRU Cache": "Design a Least Recently Used cache with O(1) `get(key)` and `put(key, value)`. When capacity is exceeded, evict the least recently used key.",
+# ---------- trees ----------
+"Binary Tree Maximum Path Sum": "Return the maximum sum of any non-empty path between two nodes in a binary tree.",
+"Maximum Width of Binary Tree": "Return the maximum width of any level, counted between the leftmost and rightmost non-null nodes and including the null positions between them.",
+"Construct Binary Tree from Inorder and Postorder Traversal": "Build the binary tree from its inorder and postorder traversals (values are unique).",
+"Populating Next Right Pointers in Each Node": "In a perfect binary tree, set each node's `next` pointer to its right neighbour on the same level (or NULL).",
+"Convert Sorted Array to Binary Search Tree": "Convert a sorted array into a height-balanced BST.",
+"Validate Binary Search Tree": "Return whether a binary tree is a valid BST.",
+"Lowest Common Ancestor of a Binary Search Tree": "Return the lowest common ancestor of nodes `p` and `q` in a BST.",
+"Reverse Odd Levels of Binary Tree": "In a perfect binary tree, reverse the node values on every odd level.",
+"Kth Smallest Element in a BST": "Return the `k`-th smallest value (1-indexed) in a BST.",
+"Unique Binary Search Trees II": "Return every structurally unique BST that stores the values `1..n`.",
+"Closest Nodes Queries in a Binary Search Tree": "For each query `q`, return `[largest value ≤ q, smallest value ≥ q]` from the BST, using -1 when one doesn't exist.",
+"Delete Node in a BST": "Delete the node with value `key` from a BST and return the new root.",
+"Kth Largest Sum in a Binary Tree": "Return the `k`-th largest level sum, or -1 if the tree has fewer than `k` levels.",
+"Cousins in Binary Tree II": "Replace each node's value with the sum of its cousins' values (same depth, different parent).",
+"Flip Equivalent Binary Trees": "A flip swaps a node's left and right children. Return whether some sequence of flips turns one tree into the other.",
+"Height of Binary Tree After Subtree Removal Queries": "For each query, remove the subtree rooted at that node and return the tree's height. Each query is independent.",
+}
+
+root = pathlib.Path(__file__).resolve().parent.parent / "content"
+missing = []
+for md in sorted(root.glob("*.md")):
+    lines = md.read_text().split("\n")
+    out, i = [], 0
+    while i < len(lines):
+        line = lines[i]
+        out.append(line)
+        if line.startswith("## "):
+            title = line[3:].strip()
+            gist = G.get(f"{md.name}:{title}") or G.get(title)
+            k = i + 1
+            while k < len(lines) and lines[k] == "":
+                k += 1
+            if k < len(lines) and lines[k].startswith("["):
+                out.extend(lines[i + 1:k + 1]); i = k
+            j = i + 1
+            while j < len(lines) and lines[j] == "":
+                j += 1
+            already = j < len(lines) and lines[j].startswith("> **Problem:**")
+            if gist and not already:
+                out += ["", f"> **Problem:** {gist}", ""]
+            elif not gist and not already:
+                missing.append(f"{md.name}: {title}")
+        i += 1
+    md.write_text("\n".join(out))
+print("no gist for:", *missing, sep="\n  ")
